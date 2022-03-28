@@ -815,7 +815,7 @@ class PytorchModel:
                 logger.epoch(learning_rate=lr, metrics=metrics)
         logger.training_end()
 
-        self.eval()
+        #self.eval()
 
     def predict(self, x, device="cpu"):
         """

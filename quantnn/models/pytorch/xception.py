@@ -9,7 +9,7 @@ import torch
 from torch import nn
 
 ######################################################
-def _get_normalisation(self, normalisation, features):
+def _get_normalisation(normalisation, features):
         if normalisation == 'bn':
             return nn.BatchNorm2d(features)
         elif normalisation == 'ln':
@@ -63,7 +63,7 @@ class XceptionBlock(nn.Module):
     each folowed by batch-norm and GELU activations.
     """
 
-    def __init__(self, channels_in, channels_out, downsample=False, normalisation = 'bn'):
+    def __init__(self, channels_in, channels_out, downsample=False, normalisation = 'ln'):
         """
         Args:
             channels_in: The number of incoming channels.
@@ -75,6 +75,7 @@ class XceptionBlock(nn.Module):
         if downsample:
             self.block_1 = nn.Sequential(
                 SeparableConv3x3(channels_in, channels_out),
+                #nn.GroupNorm(1, channels_out),
                 _get_normalisation(normalisation,channels_out),
                 SymmetricPadding(1),
                 nn.MaxPool2d(kernel_size=3, stride=2),
@@ -83,12 +84,14 @@ class XceptionBlock(nn.Module):
         else:
             self.block_1 = nn.Sequential(
                 SeparableConv3x3(channels_in, channels_out),
+                #nn.GroupNorm(1, channels_out),
                 _get_normalisation(normalisation,channels_out),
                 nn.GELU(),
             )
 
         self.block_2 = nn.Sequential(
             SeparableConv3x3(channels_out, channels_out),
+            #nn.GroupNorm(1, channels_out),
             _get_normalisation(normalisation,channels_out),
             nn.GELU(),
         )
@@ -118,10 +121,10 @@ class DownsamplingBlock(nn.Sequential):
     Xception downsampling block.
     """
 
-    def __init__(self, n_channels, n_blocks,normalisation = 'bn'):
-        blocks = [XceptionBlock(n_channels, n_channels, downsample=True)]
+    def __init__(self, n_channels, n_blocks,normalisation = 'ln'):
+        blocks = [XceptionBlock(n_channels, n_channels, downsample=True,normalisation=normalisation)]
         for i in range(n_blocks):
-            blocks.append(XceptionBlock(n_channels, n_channels,normalisation))
+            blocks.append(XceptionBlock(n_channels, n_channels,normalisation=normalisation))
         super().__init__(*blocks)
 
 
@@ -130,7 +133,7 @@ class UpsamplingBlock(nn.Module):
     Xception upsampling block.
     """
 
-    def __init__(self, n_channels,normalisation='bn'):
+    def __init__(self, n_channels, normalisation = 'ln'):
         """
         Args:
             n_channels: The number of incoming and outgoing channels.
@@ -141,6 +144,7 @@ class UpsamplingBlock(nn.Module):
                                     align_corners=False)
         self.block = nn.Sequential(
             SeparableConv3x3(n_channels * 2, n_channels),
+            #nn.GroupNorm(1, n_channels),
             _get_normalisation(normalisation,n_channels),
             nn.GELU(),
         )
@@ -160,7 +164,7 @@ class XceptionFpn(nn.Module):
     architecture.
     """
 
-    def __init__(self, n_inputs, n_outputs, n_features=128, blocks=2, normalisation = 'bn'):
+    def __init__(self, n_inputs, n_outputs, n_features=128, blocks=2, normalisation = 'ln'):
         """
         Args:
             n_inputs: Number of input channels.
@@ -189,9 +193,11 @@ class XceptionFpn(nn.Module):
 
         self.head = nn.Sequential(
             nn.Conv2d(2 * n_features, n_features, 1),
+            #nn.GroupNorm(1, n_features),
             _get_normalisation(normalisation,n_features),
             nn.GELU(),
             nn.Conv2d(n_features, n_features, 1),
+            #nn.GroupNorm(1, n_features),
             _get_normalisation(normalisation,n_features),
             nn.GELU(),
             nn.Conv2d(n_features, n_outputs, 1),
