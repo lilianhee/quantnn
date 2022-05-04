@@ -85,7 +85,8 @@ def cdf(y_pred, quantiles, quantile_axis=1):
     selection_r = tuple(selection_r)
     dx = y_pred[selection_r] - y_pred[selection_c]
     dx /= quantiles[1] - quantiles[0]
-    x_cdf_l = y_pred[selection_c] - 2.0 * quantiles[0] * dx
+    x_cdf_l = y_pred[selection_c] - 1.0 * quantiles[0] * dx
+    x_cdf_l = 0 if x_cdf_l < 0 else x_cdf_l
     x_cdf_l = expand_dims(xp, x_cdf_l, quantile_axis)
 
     selection_l = copy(selection)
@@ -96,7 +97,8 @@ def cdf(y_pred, quantiles, quantile_axis=1):
     selection_c = tuple(selection_c)
     dx = y_pred[selection_c] - y_pred[selection_l]
     dx /= quantiles[-1] - quantiles[-2]
-    x_cdf_r = y_pred[selection_c] + 2.0 * (1.0 - quantiles[-1]) * dx
+    x_cdf_r = y_pred[selection_c] + 1.0 * (1.0 - quantiles[-1]) * dx
+    x_cdf_r = 400 if x_cdf_r > 400 else x_cdf_r
     x_cdf_r = expand_dims(xp, x_cdf_r, quantile_axis)
 
     x_cdf = concatenate(xp, [x_cdf_l, y_pred, x_cdf_r], quantile_axis)
